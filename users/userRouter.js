@@ -2,6 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const Users = require('./userDb.js');
+const Posts = require('../posts/postDb.js');
 
 router.post('/', validateUser, (req, res) => {
   Users.insert(req.body)
@@ -13,8 +14,15 @@ router.post('/', validateUser, (req, res) => {
   })
 });
 
-router.post('/:id/posts', (req, res) => {
-  // do your magic!
+router.post('/:id/posts', validatePost, (req, res) => {
+  //console.log(req.body);
+  Users.insert(req.body)
+  .then(post => {
+    res.status(201).json(post);
+  })
+  .catch(err => {
+    res.status(500),json({error: "Error adding post"});
+  })
 });
 
 router.get('/', (req, res) => {
@@ -29,7 +37,6 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:id', validateUserId, (req, res) => {
-  console.log("req stuff", req.params.id);
   Users.getById(req.params.id)
   .then(user => {
     res.status(200).json(user);
@@ -39,16 +46,31 @@ router.get('/:id', validateUserId, (req, res) => {
   })
 });
 
-router.get('/:id/posts', (req, res) => {
-  // do your magic!
+router.get('/:id/posts', validateUserId, (req, res) => {
+  Users.getUserPosts(req.params.id)
+  .then(posts => {
+    res.status(200).json(posts);
+  })
+  .catch(err => {
+    res.status(500).json({error: "Failed to get user posts"});
+  })
 });
 
-router.delete('/:id', (req, res) => {
-  // do your magic!
+router.delete('/:id', validateUserId, (req, res) => {
+  Users.remove(req.params.id)
+  .then(user => {
+    res.status(200).json({message: "Successfully deleted user"})
+  })
 });
 
-router.put('/:id', (req, res) => {
-  // do your magic!
+router.put('/:id', validateUserId, validateUser, (req, res) => {
+  Users.update(req.params.id, req.body)
+  .then(user => {
+    res.status(200).json({message: "Successfully updated user"});
+  })
+  .catch(err => {
+    res.status(500).json({error: "Error editing user"});
+  })
 });
 
 //custom middleware
@@ -80,7 +102,13 @@ function validateUser(req, res, next) {
 }
 
 function validatePost(req, res, next) {
-  // do your magic!
+  if (!req.body) {
+    res.status(400).json({error: "Missing post data"});
+  } else if (!req.body.text) {
+    res.status(400).json({error: "Missing required text field"});
+  } else {
+    next();
+  }
 }
 
 module.exports = router;
